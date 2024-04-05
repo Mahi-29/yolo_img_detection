@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Prediction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .upload-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-container input[type="file"],
+        .upload-container button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-container input[type="file"] {
+            background-color: #f0f0f0;
+        }
+
+        .upload-container button {
+            background-color: #4CAF50;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-container button:hover {
+            background-color: #45a049;
+        }
+
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .image-container > div {
+            margin: 0 20px;
+            text-align: center;
+        }
+
+        #inputImage, #outputImage {
+            max-width: 400px;
+            max-height: 400px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333333;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 18px;
+        }
+
+        .no-image {
+            color: #888888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Object Detection by YOLOV5</h1>
+        <div class="upload-container">
+            <form method="post" id="upload-form" enctype="multipart/form-data">
+                <input type="file" id="imageInput" name="image" accept="image/*" required>
+                <button type="submit">Predict</button>
+            </form>
+        </div>
+        <div class="image-container">
+            <div>
+                <h2>Image</h2>
+                <img id="inputImage" src="" alt="Input Image">
+                <p class="no-image" id="noInputImage">No image selected</p>
+            </div>
+            <div>
+                <h2>Output</h2>
+                <div id="outputContainer">
+                </div>
+                <div>
+                    <button id="downloadButton" style="display: none;">Download Image</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const inputImage = document.getElementById('inputImage');
+        const noInputImage = document.getElementById('noInputImage');
+        const uploadForm = document.getElementById('upload-form');
+        const outputContainer = document.getElementById('outputContainer');
+        const downloadButton = document.getElementById("downloadButton");
+        downloadButton.addEventListener('click', downloadOutputImage);
+
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    inputImage.src = reader.result;
+                    noInputImage.style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                inputImage.src = '';
+                noInputImage.style.display = 'block';
+            }
+        });
+
+        uploadForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const file = imageInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                const base64Image = reader.result.split(',')[1];
+                sendBase64Image(base64Image);
+            };
+
+            reader.readAsDataURL(file);
+        });
+        function renderOutputImage(imageUrl) {
+            console.log(downloadButton.style.display)
+            outputContainer.innerHTML = `<img id="outputImage" src="${imageUrl}" alt="Output Image"> `;
+            downloadButton.style.display = 'block';
+            console.log(downloadButton.style.display)
+
+        }
+
+        function sendBase64Image(base64Image) {
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: base64Image })
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+                renderOutputImage(result.output_file)
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        function downloadOutputImage() {
+            const outputImage = document.getElementById('outputImage');
+            const downloadLink = document.createElement('a');
+            console.log(outputImage.src)
+            downloadLink.href = outputImage.src;
+            downloadLink.download = 'output.jpg'; // Set the download file name
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+    </script>
+</body>
+</html>
